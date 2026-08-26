@@ -1,0 +1,14 @@
+{
+  "name": "dj-track-sorter",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test:backend": "cd backend && python3 -m pytest -v"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
