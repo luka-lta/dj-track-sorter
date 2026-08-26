@@ -54,7 +54,7 @@ def build_plan(
         if target_path.exists():
             warnings.append("Zieldatei existiert bereits, Track wird übersprungen.")
 
-        plan.append({
+        item = {
             "track_name": track.name,
             "track_path": str(track),
             "genre": genre,
@@ -62,7 +62,10 @@ def build_plan(
             "write_mytag": write_mytag,
             "target_path": str(target_path),
             "warnings": warnings,
-        })
+        }
+        if content is not None:
+            item["_content"] = content
+        plan.append(item)
 
     return plan
 

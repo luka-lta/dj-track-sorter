@@ -43,6 +43,7 @@ def test_build_plan_uses_existing_mytag_without_user_choice(tmp_path):
         "write_mytag": False,
         "target_path": str(dj_root / "Schranz" / "a.mp3"),
         "warnings": [],
+        "_content": content,
     }]
 
 
@@ -66,6 +67,7 @@ def test_build_plan_uses_user_choice_and_flags_write_mytag(tmp_path):
         "write_mytag": True,
         "target_path": str(dj_root / "Hardtechno" / "b.mp3"),
         "warnings": [],
+        "_content": content,
     }]
 
 
