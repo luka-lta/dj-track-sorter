@@ -6,7 +6,7 @@ function registerIpcHandlers(sidecar) {
   ipcMain.handle('dj:save-settings', (_e, settings) => sidecar.send('save_settings', { settings }));
   ipcMain.handle('dj:scan', () => sidecar.send('scan'));
   ipcMain.handle('dj:plan', (_e, genreChoices) => sidecar.send('plan', { genre_choices: genreChoices }));
-  ipcMain.handle('dj:execute', () => sidecar.send('execute'));
+  ipcMain.handle('dj:execute', (_e, genreChoices) => sidecar.send('execute', { genre_choices: genreChoices }));
   ipcMain.handle('dj:pick-folder', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     if (result.canceled || result.filePaths.length === 0) return null;

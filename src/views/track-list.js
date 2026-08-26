@@ -1,5 +1,5 @@
 // src/views/track-list.js
-function renderTrackList(container, { tracks, knownGenres, onSubmit }) {
+function renderTrackList(container, { tracks, knownGenres, onSubmit, neuDirMissing }) {
   container.innerHTML = '';
 
   const header = document.createElement('header');
@@ -9,7 +9,10 @@ function renderTrackList(container, { tracks, knownGenres, onSubmit }) {
 
   if (tracks.length === 0) {
     const empty = document.createElement('p');
-    empty.textContent = 'Keine neuen Tracks gefunden.';
+    empty.className = neuDirMissing ? 'warning' : '';
+    empty.textContent = neuDirMissing
+      ? 'Der Neu-Ordner existiert nicht. Bitte in den Einstellungen einen gültigen Ordner auswählen.'
+      : 'Keine neuen Tracks gefunden.';
     container.appendChild(empty);
     return;
   }

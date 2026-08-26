@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('djApi', {
   saveSettings: (settings) => ipcRenderer.invoke('dj:save-settings', settings),
   scan: () => ipcRenderer.invoke('dj:scan'),
   plan: (genreChoices) => ipcRenderer.invoke('dj:plan', genreChoices),
-  execute: () => ipcRenderer.invoke('dj:execute'),
+  execute: (genreChoices) => ipcRenderer.invoke('dj:execute', genreChoices),
   pickFolder: () => ipcRenderer.invoke('dj:pick-folder'),
   onSidecarCrash: (callback) => ipcRenderer.on('dj:sidecar-crash', (_e, code) => callback(code)),
 });

@@ -3,6 +3,9 @@ const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const readline = require('readline');
 
+/** Zeitlimit für eine einzelne Sidecar-Anfrage in Millisekunden (30 Sekunden). */
+const REQUEST_TIMEOUT_MS = 30 * 1000;
+
 class Sidecar extends EventEmitter {
   constructor(command, args) {
     super();
@@ -26,11 +29,21 @@ class Sidecar extends EventEmitter {
     });
 
     this.process.on('exit', (code) => {
-      for (const { reject } of this.pending.values()) {
+      for (const { reject, timeoutId } of this.pending.values()) {
+        clearTimeout(timeoutId);
         reject(new Error('Sidecar-Prozess wurde beendet'));
       }
       this.pending.clear();
       this.emit('crash', code);
+    });
+
+    this.process.on('error', (err) => {
+      for (const { reject, timeoutId } of this.pending.values()) {
+        clearTimeout(timeoutId);
+        reject(err);
+      }
+      this.pending.clear();
+      this.emit('crash', err);
     });
   }
 
@@ -45,6 +58,7 @@ class Sidecar extends EventEmitter {
     const entry = this.pending.get(response.id);
     if (!entry) return;
     this.pending.delete(response.id);
+    clearTimeout(entry.timeoutId);
     if (response.ok) {
       entry.resolve(response.result);
     } else {
@@ -55,7 +69,11 @@ class Sidecar extends EventEmitter {
   send(cmd, params = {}) {
     return new Promise((resolve, reject) => {
       const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
+      const timeoutId = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`Sidecar-Anfrage "${cmd}" hat das Zeitlimit überschritten`));
+      }, REQUEST_TIMEOUT_MS);
+      this.pending.set(id, { resolve, reject, timeoutId });
       this.process.stdin.write(JSON.stringify({ id, cmd, params }) + '\n');
     });
   }

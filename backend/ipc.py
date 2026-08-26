@@ -24,11 +24,12 @@ def _cmd_save_settings(params: dict, deps: dict) -> dict:
 def _cmd_scan(params: dict, deps: dict) -> dict:
     settings = load_settings(deps["settings_path"])
     neu_dir = Path(settings["neu_dir"])
+    neu_dir_missing = not neu_dir.exists()
     audio_extensions = {".mp3", ".m4a", ".mp4", ".flac", ".wav", ".aiff", ".aif"}
     tracks = sorted(
         p for p in neu_dir.iterdir()
         if p.is_file() and p.suffix.lower() in audio_extensions
-    ) if neu_dir.exists() else []
+    ) if not neu_dir_missing else []
 
     try:
         rb_db = db.open_db()
@@ -46,7 +47,7 @@ def _cmd_scan(params: dict, deps: dict) -> dict:
             "found_in_rekordbox": content is not None,
             "detected_genre": genre,
         })
-    return {"tracks": results}
+    return {"tracks": results, "neu_dir_missing": neu_dir_missing}
 
 
 def _cmd_plan(params: dict, deps: dict) -> dict:

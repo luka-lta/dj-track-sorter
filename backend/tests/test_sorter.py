@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import SimpleNamespace
 
 from sorter import genre_from_content, build_plan, execute_plan

@@ -28,20 +28,31 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
 }
 
-app.whenReady().then(() => {
+function startSidecar() {
   const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  const { command, args } = sidecarCommand();
-  sidecar = new Sidecar(command, args);
+  // Dieselbe Sidecar-Instanz wiederverwenden, falls vorhanden, damit die in
+  // registerIpcHandlers() erzeugten Closures weiterhin auf das richtige
+  // Objekt zeigen, wenn der Prozess nach einem Neustart neu gestartet wird.
+  if (!sidecar) {
+    const { command, args } = sidecarCommand();
+    sidecar = new Sidecar(command, args);
+    sidecar.on('crash', (code) => {
+      if (mainWindow) mainWindow.webContents.send('dj:sidecar-crash', code);
+    });
+  }
   sidecar.start(settingsPath);
-  sidecar.on('crash', (code) => {
-    if (mainWindow) mainWindow.webContents.send('dj:sidecar-crash', code);
-  });
+}
 
+app.whenReady().then(() => {
+  startSidecar();
   registerIpcHandlers(sidecar);
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      if (!sidecar || !sidecar.process) startSidecar();
+      createWindow();
+    }
   });
 });
 
