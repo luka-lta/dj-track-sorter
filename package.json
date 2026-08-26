@@ -5,7 +5,9 @@
   "main": "main/main.js",
   "scripts": {
     "start": "electron .",
-    "test:backend": "cd backend && python3 -m pytest -v"
+    "test:backend": "cd backend && python3 -m pytest -v",
+    "build:sidecar": "bash build-sidecar.sh",
+    "dist": "npm run build:sidecar && electron-builder"
   },
   "devDependencies": {
     "electron": "^31.0.0",

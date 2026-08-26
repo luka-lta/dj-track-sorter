@@ -1,0 +1,16 @@
+appId: com.example.djtracksorter
+productName: DJ Track Sorter
+directories:
+  output: dist
+files:
+  - main/**/*
+  - src/**/*
+  - package.json
+extraResources:
+  - from: resources/sidecar
+    to: sidecar
+mac:
+  target: dmg
+  category: public.app-category.music
+win:
+  target: nsis
