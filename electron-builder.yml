@@ -12,5 +12,7 @@ extraResources:
 mac:
   target: dmg
   category: public.app-category.music
+  hardenedRuntime: true
+  gatekeeperAssess: false
 win:
   target: nsis
