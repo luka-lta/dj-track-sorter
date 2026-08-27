@@ -1,6 +1,8 @@
 {
   "name": "dj-track-sorter",
   "version": "0.1.0",
+  "description": "Sortiert DJ-Tracks anhand rekordbox MyTags in Genre-Ordner",
+  "author": "luka-lta",
   "private": true,
   "main": "main/main.js",
   "scripts": {
