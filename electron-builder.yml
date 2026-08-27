@@ -1,6 +1,5 @@
 appId: com.lukalta.djtracksorter
 productName: DJ Track Sorter
-publish: never
 directories:
   output: dist
 files:

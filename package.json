@@ -9,10 +9,10 @@
     "start": "electron .",
     "test:backend": "cd backend && python3 -m pytest -v",
     "build:sidecar": "bash build-sidecar.sh",
-    "dist": "npm run build:sidecar && electron-builder"
+    "dist": "npm run build:sidecar && electron-builder --publish never"
   },
   "devDependencies": {
     "electron": "^44.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^26.0.0"
   }
 }
