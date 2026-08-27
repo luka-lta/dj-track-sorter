@@ -37,10 +37,11 @@ jobs:
 
       - name: Run backend tests
         run: |
-          if [ -f backend/.venv/Scripts/python.exe ]; then
-            backend/.venv/Scripts/python.exe -m pytest backend -v
+          cd backend
+          if [ -f .venv/Scripts/python.exe ]; then
+            .venv/Scripts/python.exe -m pytest -v
           else
-            backend/.venv/bin/python -m pytest backend -v
+            .venv/bin/python -m pytest -v
           fi
         shell: bash
 
