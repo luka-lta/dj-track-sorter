@@ -33,13 +33,30 @@ function renderSettings(container, { settings, onSave, onCancel }) {
 
   const genresRow = document.createElement('div');
   genresRow.className = 'track-row';
-  const genresInput = document.createElement('input');
-  genresInput.value = state.known_genres.join(', ');
-  genresInput.placeholder = 'Genre1, Genre2, ...';
-  genresInput.addEventListener('input', () => {
-    state.known_genres = genresInput.value.split(',').map((g) => g.trim()).filter(Boolean);
+  const genresText = document.createElement('span');
+  genresText.textContent = state.known_genres.length > 0
+    ? `Genres: ${state.known_genres.join(', ')}`
+    : 'Genres: (noch nicht synchronisiert)';
+  genresRow.appendChild(genresText);
+
+  const syncBtn = document.createElement('button');
+  syncBtn.className = 'secondary';
+  syncBtn.textContent = 'Jetzt synchronisieren';
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    try {
+      const { known_genres: syncedGenres } = await window.djApi.syncGenres();
+      state.known_genres = syncedGenres;
+      genresText.textContent = syncedGenres.length > 0
+        ? `Genres: ${syncedGenres.join(', ')}`
+        : 'Genres: (keine "Genre"-MyTags in rekordbox gefunden)';
+    } catch (err) {
+      genresText.textContent = 'Fehler beim Synchronisieren: ' + err.message;
+    } finally {
+      syncBtn.disabled = false;
+    }
   });
-  genresRow.appendChild(genresInput);
+  genresRow.appendChild(syncBtn);
   container.appendChild(genresRow);
 
   const dryRunRow = document.createElement('div');

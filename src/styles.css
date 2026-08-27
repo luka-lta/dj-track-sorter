@@ -67,6 +67,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   font-size: 0.85rem;
 }
 
+.track-row .preview-btn {
+  padding: 0.35rem 0.6rem;
+  min-width: 2.2rem;
+  flex-shrink: 0;
+}
+
 .track-row select {
   background: var(--bg);
   color: var(--text);

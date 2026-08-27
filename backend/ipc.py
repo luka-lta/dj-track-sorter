@@ -44,6 +44,7 @@ def _cmd_scan(params: dict, deps: dict) -> dict:
         genre = sorter.genre_from_content(content, known_genres) if content else None
         results.append({
             "track_name": track.name,
+            "track_path": str(track),
             "found_in_rekordbox": content is not None,
             "detected_genre": genre,
         })
@@ -104,6 +105,19 @@ def _cmd_execute(params: dict, deps: dict) -> dict:
     return {"results": results}
 
 
+def _cmd_sync_genres(params: dict, deps: dict) -> dict:
+    try:
+        rb_db = db.open_db()
+    except db.DbLockedError as e:
+        raise IpcError(f"rekordbox-Datenbank konnte nicht geöffnet werden: {e}") from e
+
+    known_genres = db.load_genre_mytags(rb_db)
+    settings = load_settings(deps["settings_path"])
+    settings["known_genres"] = known_genres
+    save_settings(deps["settings_path"], settings)
+    return {"known_genres": known_genres}
+
+
 def _set_mytag(rb_db, content, mytag) -> None:
     import datetime
     from uuid import uuid4
@@ -126,6 +140,7 @@ _HANDLERS = {
     "scan": _cmd_scan,
     "plan": _cmd_plan,
     "execute": _cmd_execute,
+    "sync_genres": _cmd_sync_genres,
 }
 
 

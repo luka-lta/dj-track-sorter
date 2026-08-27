@@ -25,3 +25,11 @@ def build_content_lookup(db) -> dict[str, object]:
             continue
         lookup[path] = content
     return lookup
+
+
+def load_genre_mytags(db, category_name: str = "Genre") -> list[str]:
+    """Liest alle MyTag-Werte aus der MyTag-Kategorie mit dem gegebenen Namen."""
+    category = next(iter(db.get_my_tag(Name=category_name)), None)
+    if category is None:
+        return []
+    return sorted(child.Name for child in category.Children)

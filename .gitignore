@@ -8,3 +8,4 @@ backend/dist/
 resources/
 *.pyc
 .DS_Store
+.idea/

@@ -1,5 +1,37 @@
 // src/views/track-list.js
+let _previewAudio = null;
+let _previewButton = null;
+
+function _toFileUrl(path) {
+  return 'file://' + path.split('/').map(encodeURIComponent).join('/');
+}
+
+function _stopPreview() {
+  if (_previewAudio) {
+    _previewAudio.pause();
+    _previewAudio = null;
+  }
+  if (_previewButton) {
+    _previewButton.textContent = '▶';
+    _previewButton = null;
+  }
+}
+
+function _togglePreview(track, button) {
+  const isThisTrackPlaying = _previewButton === button;
+  _stopPreview();
+  if (isThisTrackPlaying) return;
+
+  const audio = new Audio(_toFileUrl(track.track_path));
+  audio.addEventListener('ended', () => _stopPreview());
+  audio.play();
+  button.textContent = '⏸';
+  _previewAudio = audio;
+  _previewButton = button;
+}
+
 function renderTrackList(container, { tracks, knownGenres, onSubmit, neuDirMissing }) {
+  _stopPreview();
   container.innerHTML = '';
 
   const header = document.createElement('header');
@@ -22,6 +54,12 @@ function renderTrackList(container, { tracks, knownGenres, onSubmit, neuDirMissi
   for (const track of tracks) {
     const row = document.createElement('div');
     row.className = 'track-row';
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'secondary preview-btn';
+    playBtn.textContent = '▶';
+    playBtn.addEventListener('click', () => _togglePreview(track, playBtn));
+    row.appendChild(playBtn);
 
     const name = document.createElement('span');
     name.textContent = track.track_name;
@@ -56,6 +94,9 @@ function renderTrackList(container, { tracks, knownGenres, onSubmit, neuDirMissi
 
   const submitBtn = document.createElement('button');
   submitBtn.textContent = 'Vorschau';
-  submitBtn.addEventListener('click', () => onSubmit(choices));
+  submitBtn.addEventListener('click', () => {
+    _stopPreview();
+    onSubmit(choices);
+  });
   container.appendChild(submitBtn);
 }

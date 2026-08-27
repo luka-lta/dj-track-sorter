@@ -22,6 +22,7 @@ function renderError(app, message, { onRetry, onSettings } = {}) {
 }
 
 function openSettings(app, settings) {
+  if (typeof _stopPreview === 'function') _stopPreview();
   renderSettings(app, {
     settings,
     onSave: async (newSettings) => {
@@ -46,12 +47,40 @@ async function main() {
     return;
   }
 
-  // Header + Einstellungen-Button werden vor dem scan()-Aufruf angehängt,
+  // Automatischer Sync beim Start — Fehlschlag blockiert den Flow nicht,
+  // der anschließende scan()-Aufruf zeigt einen echten DB-Fehler ohnehin an.
+  try {
+    const { known_genres: syncedGenres } = await window.djApi.syncGenres();
+    settings.known_genres = syncedGenres;
+  } catch (err) {
+    // Bleibt bei den zuletzt gespeicherten known_genres, kein Abbruch.
+  }
+
+  // Header + Buttons werden vor dem scan()-Aufruf angehängt,
   // damit sie auch bei einem fehlschlagenden Scan erreichbar bleiben.
   const header = document.createElement('header');
   header.className = 'app-header';
   header.innerHTML = '<h1>Neue Tracks</h1>';
   app.appendChild(header);
+
+  const syncBtn = document.createElement('button');
+  syncBtn.className = 'secondary';
+  syncBtn.textContent = 'Sync';
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    try {
+      await window.djApi.syncGenres();
+    } catch (err) {
+      app.innerHTML = '';
+      renderError(app, 'Fehler beim Synchronisieren: ' + err.message, {
+        onRetry: () => main(),
+        onSettings: () => openSettings(app, settings),
+      });
+      return;
+    }
+    main();
+  });
+  header.appendChild(syncBtn);
 
   const settingsBtn = document.createElement('button');
   settingsBtn.className = 'secondary';
@@ -108,8 +137,10 @@ async function main() {
   });
 
   // Nach renderTrackList() wurde app.innerHTML neu aufgebaut (eigener Header),
-  // daher den Einstellungen-Button erneut anhängen.
-  app.querySelector('header.app-header').appendChild(settingsBtn);
+  // daher Sync- und Einstellungen-Button erneut anhängen.
+  const rebuiltHeader = app.querySelector('header.app-header');
+  rebuiltHeader.appendChild(syncBtn);
+  rebuiltHeader.appendChild(settingsBtn);
 
   window.djApi.onSidecarCrash(() => {
     app.innerHTML = '<p class="warning">Backend-Prozess abgestürzt. Bitte App neu starten.</p>';
