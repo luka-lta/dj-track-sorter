@@ -1,4 +1,4 @@
-appId: com.example.djtracksorter
+appId: com.lukalta.djtracksorter
 productName: DJ Track Sorter
 directories:
   output: dist
