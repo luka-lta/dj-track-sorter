@@ -21,6 +21,19 @@ function renderError(app, message, { onRetry, onSettings } = {}) {
   }
 }
 
+function renderLoading(app, message) {
+  app.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'loading';
+  const spinner = document.createElement('div');
+  spinner.className = 'spinner';
+  wrapper.appendChild(spinner);
+  const text = document.createElement('p');
+  text.textContent = message;
+  wrapper.appendChild(text);
+  app.appendChild(wrapper);
+}
+
 function openSettings(app, settings) {
   if (typeof _stopPreview === 'function') _stopPreview();
   renderSettings(app, {
@@ -35,7 +48,7 @@ function openSettings(app, settings) {
 
 async function main() {
   const app = document.getElementById('app');
-  app.innerHTML = '';
+  renderLoading(app, 'Lädt...');
 
   let settings;
   try {
@@ -49,6 +62,7 @@ async function main() {
 
   // Automatischer Sync beim Start — Fehlschlag blockiert den Flow nicht,
   // der anschließende scan()-Aufruf zeigt einen echten DB-Fehler ohnehin an.
+  renderLoading(app, 'Synchronisiere Genres...');
   try {
     const { known_genres: syncedGenres } = await window.djApi.syncGenres();
     settings.known_genres = syncedGenres;
@@ -58,6 +72,7 @@ async function main() {
 
   // Header + Buttons werden vor dem scan()-Aufruf angehängt,
   // damit sie auch bei einem fehlschlagenden Scan erreichbar bleiben.
+  app.innerHTML = '';
   const header = document.createElement('header');
   header.className = 'app-header';
   header.innerHTML = '<h1>Neue Tracks</h1>';
@@ -88,15 +103,22 @@ async function main() {
   settingsBtn.addEventListener('click', () => openSettings(app, settings));
   header.appendChild(settingsBtn);
 
+  const scanningMsg = document.createElement('p');
+  scanningMsg.className = 'muted';
+  scanningMsg.textContent = 'Scanne Tracks...';
+  app.appendChild(scanningMsg);
+
   let scanResult;
   try {
     scanResult = await window.djApi.scan();
   } catch (err) {
+    scanningMsg.remove();
     renderError(app, 'Fehler beim Scannen: ' + err.message, {
       onRetry: () => main(),
     });
     return;
   }
+  scanningMsg.remove();
 
   const { tracks, neu_dir_missing: neuDirMissing } = scanResult;
 
