@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from pathlib import Path
 
@@ -47,6 +48,7 @@ def _cmd_scan(params: dict, deps: dict) -> dict:
             "track_path": str(track),
             "found_in_rekordbox": content is not None,
             "detected_genre": genre,
+            "date_added": datetime.datetime.fromtimestamp(track.stat().st_mtime).isoformat(),
         })
     return {"tracks": results, "neu_dir_missing": neu_dir_missing}
 
@@ -69,7 +71,8 @@ def _cmd_plan(params: dict, deps: dict) -> dict:
 
     lookup = db.build_content_lookup(rb_db)
     genre_choices = params.get("genre_choices", {})
-    plan = sorter.build_plan(tracks, lookup, known_genres, dj_root, genre_choices)
+    selected_tracks = set(params["selected_tracks"]) if "selected_tracks" in params else None
+    plan = sorter.build_plan(tracks, lookup, known_genres, dj_root, genre_choices, selected_tracks)
     return {"plan": [{k: v for k, v in item.items() if k != "_content"} for item in plan]}
 
 
@@ -91,7 +94,8 @@ def _cmd_execute(params: dict, deps: dict) -> dict:
 
     lookup = db.build_content_lookup(rb_db)
     genre_choices = params.get("genre_choices", {})
-    plan = sorter.build_plan(tracks, lookup, known_genres, dj_root, genre_choices)
+    selected_tracks = set(params["selected_tracks"]) if "selected_tracks" in params else None
+    plan = sorter.build_plan(tracks, lookup, known_genres, dj_root, genre_choices, selected_tracks)
 
     if settings.get("dry_run"):
         return {"results": [{"track_name": i["track_name"], "status": "dry_run"} for i in plan]}
@@ -100,6 +104,7 @@ def _cmd_execute(params: dict, deps: dict) -> dict:
         rb_db, plan,
         find_mytag_fn=lambda d, name: next(iter(d.get_my_tag(Name=name)), None),
         set_mytag_fn=_set_mytag,
+        remove_mytag_fn=_remove_mytag,
     )
     rb_db.commit()
     return {"results": results}
@@ -119,7 +124,6 @@ def _cmd_sync_genres(params: dict, deps: dict) -> dict:
 
 
 def _set_mytag(rb_db, content, mytag) -> None:
-    import datetime
     from uuid import uuid4
     from pyrekordbox.db6 import tables
 
@@ -132,6 +136,12 @@ def _set_mytag(rb_db, content, mytag) -> None:
         UUID=str(uuid4()), created_at=now, updated_at=now,
     )
     rb_db.add(song_mytag)
+
+
+def _remove_mytag(rb_db, content, mytag) -> None:
+    song_mytag = next((s for s in content.MyTags if s.MyTagID == mytag.ID), None)
+    if song_mytag is not None:
+        rb_db.delete(song_mytag)
 
 
 _HANDLERS = {

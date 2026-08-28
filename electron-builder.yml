@@ -4,7 +4,7 @@ directories:
   output: dist
 files:
   - main/**/*
-  - src/**/*
+  - renderer-dist/**/*
   - package.json
 extraResources:
   - from: resources/sidecar

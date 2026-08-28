@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -86,6 +87,8 @@ def test_dispatch_scan_includes_track_path(tmp_path):
          patch("ipc.db.build_content_lookup", return_value={}):
         result = dispatch("scan", {}, {"settings_path": settings_path})
 
+    date_added = result["tracks"][0].pop("date_added")
+    datetime.fromisoformat(date_added)
     assert result["tracks"] == [{
         "track_name": "a.mp3",
         "track_path": str(track),

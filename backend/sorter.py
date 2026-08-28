@@ -21,34 +21,51 @@ def build_plan(
     known_genres: set[str],
     dj_root: Path,
     genre_choices: dict[str, str],
+    selected_tracks: set[str] | None = None,
 ) -> list[dict]:
     plan: list[dict] = []
 
     for track in tracks:
-        content = content_lookup.get(str(track.resolve()))
-        genre = genre_from_content(content, known_genres) if content else None
-        source = "mytag" if genre else None
-        write_mytag = False
-        warnings: list[str] = []
+        if selected_tracks is not None and track.name not in selected_tracks:
+            plan.append({
+                "track_name": track.name,
+                "track_path": str(track),
+                "genre": None,
+                "source": "skip",
+                "write_mytag": False,
+                "target_path": None,
+                "warnings": ["Track wurde abgewählt."],
+            })
+            continue
 
-        if genre is None:
-            chosen = genre_choices.get(track.name)
-            if chosen is None:
-                plan.append({
-                    "track_name": track.name,
-                    "track_path": str(track),
-                    "genre": None,
-                    "source": "skip",
-                    "write_mytag": False,
-                    "target_path": None,
-                    "warnings": ["Track wurde nicht in der rekordbox-Datenbank gefunden."]
-                        if content is None else
-                        ["Kein Genre ausgewählt, Track wird übersprungen."],
-                })
-                continue
+        content = content_lookup.get(str(track.resolve()))
+        detected_genre = genre_from_content(content, known_genres) if content else None
+        chosen = genre_choices.get(track.name)
+        warnings: list[str] = []
+        previous_genre = None
+
+        if chosen is not None and chosen != detected_genre:
             genre = chosen
             source = "user"
             write_mytag = content is not None
+            previous_genre = detected_genre
+        elif detected_genre is not None:
+            genre = detected_genre
+            source = "mytag"
+            write_mytag = False
+        else:
+            plan.append({
+                "track_name": track.name,
+                "track_path": str(track),
+                "genre": None,
+                "source": "skip",
+                "write_mytag": False,
+                "target_path": None,
+                "warnings": ["Track wurde nicht in der rekordbox-Datenbank gefunden."]
+                    if content is None else
+                    ["Kein Genre ausgewählt, Track wird übersprungen."],
+            })
+            continue
 
         target_path = dj_root / genre / track.name
         if target_path.exists():
@@ -60,6 +77,7 @@ def build_plan(
             "genre": genre,
             "source": source,
             "write_mytag": write_mytag,
+            "previous_genre": previous_genre,
             "target_path": str(target_path),
             "warnings": warnings,
         }
@@ -70,13 +88,19 @@ def build_plan(
     return plan
 
 
-def execute_plan(db, plan_items: list[dict], find_mytag_fn, set_mytag_fn) -> list[dict]:
+def execute_plan(db, plan_items: list[dict], find_mytag_fn, set_mytag_fn, remove_mytag_fn=None) -> list[dict]:
     results: list[dict] = []
 
     for item in plan_items:
         if item["warnings"] or item["source"] == "skip":
             results.append({"track_name": item["track_name"], "status": "skipped"})
             continue
+
+        previous_genre = item.get("previous_genre")
+        if previous_genre and remove_mytag_fn is not None:
+            old_mytag = find_mytag_fn(db, previous_genre)
+            if old_mytag is not None:
+                remove_mytag_fn(db, item["_content"], old_mytag)
 
         if item["write_mytag"]:
             mytag = find_mytag_fn(db, item["genre"])

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+renderer-dist/
+*.tsbuildinfo
 backend/.venv/
 backend/__pycache__/
 backend/**/__pycache__/

@@ -40,6 +40,7 @@ def test_build_plan_uses_existing_mytag_without_user_choice(tmp_path):
         "genre": "Schranz",
         "source": "mytag",
         "write_mytag": False,
+        "previous_genre": None,
         "target_path": str(dj_root / "Schranz" / "a.mp3"),
         "warnings": [],
         "_content": content,
@@ -64,10 +65,75 @@ def test_build_plan_uses_user_choice_and_flags_write_mytag(tmp_path):
         "genre": "Hardtechno",
         "source": "user",
         "write_mytag": True,
+        "previous_genre": None,
         "target_path": str(dj_root / "Hardtechno" / "b.mp3"),
         "warnings": [],
         "_content": content,
     }]
+
+
+def test_build_plan_uses_user_override_of_existing_mytag(tmp_path):
+    track = tmp_path / "g.mp3"
+    track.write_bytes(b"")
+    content = make_content(str(track.resolve()), ["Schranz"])
+    lookup = {str(track.resolve()): content}
+    dj_root = tmp_path / "DJ"
+
+    plan = build_plan(
+        [track], lookup, KNOWN_GENRES, dj_root,
+        genre_choices={"g.mp3": "Hardtechno"},
+    )
+
+    assert plan == [{
+        "track_name": "g.mp3",
+        "track_path": str(track),
+        "genre": "Hardtechno",
+        "source": "user",
+        "write_mytag": True,
+        "previous_genre": "Schranz",
+        "target_path": str(dj_root / "Hardtechno" / "g.mp3"),
+        "warnings": [],
+        "_content": content,
+    }]
+
+
+def test_build_plan_skips_deselected_track_even_with_detected_genre(tmp_path):
+    track = tmp_path / "i.mp3"
+    track.write_bytes(b"")
+    content = make_content(str(track.resolve()), ["Schranz"])
+    lookup = {str(track.resolve()): content}
+    dj_root = tmp_path / "DJ"
+
+    plan = build_plan(
+        [track], lookup, KNOWN_GENRES, dj_root,
+        genre_choices={}, selected_tracks=set(),
+    )
+
+    assert plan == [{
+        "track_name": "i.mp3",
+        "track_path": str(track),
+        "genre": None,
+        "source": "skip",
+        "write_mytag": False,
+        "target_path": None,
+        "warnings": ["Track wurde abgewählt."],
+    }]
+
+
+def test_build_plan_keeps_selected_track(tmp_path):
+    track = tmp_path / "j.mp3"
+    track.write_bytes(b"")
+    content = make_content(str(track.resolve()), ["Schranz"])
+    lookup = {str(track.resolve()): content}
+    dj_root = tmp_path / "DJ"
+
+    plan = build_plan(
+        [track], lookup, KNOWN_GENRES, dj_root,
+        genre_choices={}, selected_tracks={"j.mp3"},
+    )
+
+    assert plan[0]["source"] == "mytag"
+    assert plan[0]["genre"] == "Schranz"
 
 
 def test_build_plan_skips_track_with_no_choice(tmp_path):
@@ -135,6 +201,43 @@ def test_execute_plan_moves_file_and_sets_mytag(tmp_path):
     assert not track.exists()
     assert calls["set_mytag"] == [("c1", "Hardtechno")]
     assert results == [{"track_name": "e.mp3", "status": "moved"}]
+
+
+def test_execute_plan_removes_old_mytag_on_genre_change(tmp_path):
+    track = tmp_path / "h.mp3"
+    track.write_bytes(b"data")
+    target = tmp_path / "DJ" / "Hardtechno" / "h.mp3"
+    content = SimpleNamespace(ID="c1", MyTags=[])
+
+    calls = {"set_mytag": [], "remove_mytag": []}
+
+    def find_mytag_fn(db, name):
+        return SimpleNamespace(ID=f"tag-{name}", Name=name)
+
+    def set_mytag_fn(db, content_arg, mytag):
+        calls["set_mytag"].append((content_arg.ID, mytag.Name))
+
+    def remove_mytag_fn(db, content_arg, mytag):
+        calls["remove_mytag"].append((content_arg.ID, mytag.Name))
+
+    plan_items = [{
+        "track_name": "h.mp3",
+        "track_path": str(track),
+        "genre": "Hardtechno",
+        "source": "user",
+        "write_mytag": True,
+        "previous_genre": "Schranz",
+        "target_path": str(target),
+        "warnings": [],
+        "_content": content,
+    }]
+
+    results = execute_plan(db=None, plan_items=plan_items, find_mytag_fn=find_mytag_fn,
+                            set_mytag_fn=set_mytag_fn, remove_mytag_fn=remove_mytag_fn)
+
+    assert calls["remove_mytag"] == [("c1", "Schranz")]
+    assert calls["set_mytag"] == [("c1", "Hardtechno")]
+    assert results == [{"track_name": "h.mp3", "status": "moved"}]
 
 
 def test_execute_plan_skips_items_with_warnings(tmp_path):
